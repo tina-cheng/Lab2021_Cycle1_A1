@@ -114,7 +114,8 @@ with fits.open('masked.fits', mode='update') as file:
     file[0].data=data
     file.flush()
 file.close()
-#%%
+
+#%%   Defining functions
 def find_galaxy(h, w, pos,radius=8):
     """
     given position of a maximum pixel, find all contributing pixels to that galaxy
@@ -200,14 +201,14 @@ pos = find_local_max(data)
 #print(pos) #coords [y x]
 print(len(pos)) #how many galaxies found
 
-#%%  run to get more galaxies
+#%%  see how many galaxies/ their coords for sample
 h, w=sample.shape[:2]  
 pos=find_local_max(sample)
 galaxies=[]
 bg=[]
 print(len(pos))
 
-#%%
+#%%   Sample area 
 #for i in range(len(pos)):  
 #    r=8
 #    bg_r=12
@@ -242,42 +243,7 @@ print(len(pos))
 #        file.flush()
 #    file.close()
 
-#%% Sample
-#h, w=sample.shape[:2]  
-#pos=find_local_max(sample)
-#galaxies=[]
-#local_background=[]
-#
-#for i in range(len(pos)):  
-##for i in range(20):
-#    with fits.open('samplearea.fits', mode='update') as file:
-#        file[0].data=sample
-#        mask=find_galaxy(h, w, [pos[i][1],pos[i][0]])
-#        background=find_background(h, w, [pos[i][1],pos[i][0]])
-#        mod=find_mode(sample[~background])
-##        print(len(mod))
-#        if len(mod) == 1:
-#            mode = mod
-#        else:
-#            mode = [int(np.mean(mod))]
-##        print('mode', mode)
-#        if mode == [0]:
-#            new_arr=[v for v in sample[~background] if v != 0]
-#            new_mod=find_mode(new_arr)
-#            mode = new_mod
-#        local_background.append(mode)
-##        print(mode)
-##        print(sum(mode*len(sample[~mask])))  
-#        tot_val= sum(sample[~mask])-(sum(mode*len(sample[~mask])))
-##        print('final count', tot_val)
-#        if tot_val < 0:
-#            print(i)       #prints the position index of the nagtive count galaxies, can use cell below to see it
-#        galaxies.append(tot_val)
-#        sample[~mask]=0
-#        file.flush()
-#    file.close()
-
-#%%Whole image
+#%%Whole image   adaptive radius
 
 h, w=data.shape[:2]  
 pos=find_local_max(data)
@@ -325,7 +291,82 @@ for i in tqdm(range(len(pos))):
         file.flush()
     file.close()
 
-#print(len(neg))
+h, w=data.shape[:2]  
+pos=find_local_max(data)
+galaxies=[]
+local_background=[]
+coord=[]
+#neg=[]
+
+for i in tqdm(range(len(pos))):  
+#for i in range(20):
+    with fits.open('masked.fits', mode='update') as file:
+        file[0].data=data
+        mask=find_galaxy(h, w, [pos[i][1],pos[i][0]])
+        background=find_background(h, w, [pos[i][1],pos[i][0]])
+        mod=find_mode(data[~background])
+#        print(len(mod))
+        if len(mod) == 1:
+            mode = mod
+       
+        if mod == [0]:
+            new_arr=[v for v in data[~background] if v != 0]
+            new_mod=find_mode(new_arr)
+            mode = new_mod
+            if len(new_mod) == 1:
+                mode = new_mod
+            else:
+                mode = [int(np.mean(new_mod))]
+        else:
+            mode = [int(np.mean(mod))]
+        tot_val= sum(data[~mask])-(sum(mode*len(data[~mask])))
+        if tot_val > 0:
+            local_background.append(mode)
+            galaxies.append(tot_val)
+            coord.append(pos[i])
+
+#        data[~mask]=0
+        file.flush()
+    file.close()
+    
+#%% Whole image fixed aperture
+h, w=data.shape[:2]  
+pos=find_local_max(data)
+galaxies=[]
+local_background=[]
+coord=[]
+#neg=[]
+
+for i in tqdm(range(len(pos))):  
+#for i in range(20):
+    with fits.open('masked.fits', mode='update') as file:
+        file[0].data=data
+        mask=find_galaxy(h, w, [pos[i][1],pos[i][0]])
+        background=find_background(h, w, [pos[i][1],pos[i][0]])
+        mod=find_mode(data[~background])
+#        print(len(mod))
+        if len(mod) == 1:
+            mode = mod
+       
+        if mod == [0]:
+            new_arr=[v for v in data[~background] if v != 0]
+            new_mod=find_mode(new_arr)
+            mode = new_mod
+            if len(new_mod) == 1:
+                mode = new_mod
+            else:
+                mode = [int(np.mean(new_mod))]
+        else:
+            mode = [int(np.mean(mod))]
+        tot_val= sum(data[~mask])-(sum(mode*len(data[~mask])))
+        if tot_val > 0:
+            local_background.append(mode)
+            galaxies.append(tot_val)
+            coord.append(pos[i])
+
+#        data[~mask]=0
+        file.flush()
+    file.close()
 
 #%%  calibrating fluxes
 background=np.concatenate(local_background)
